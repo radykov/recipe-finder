@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Recipe Finder</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #faf9f6;
+      --surface: #ffffff;
+      --primary: #2d6a4f;
+      --primary-light: #52b788;
+      --accent: #e76f51;
+      --text: #1b1b1b;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+      --shadow: 0 2px 10px rgba(0,0,0,0.07);
+      --radius: 14px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ─── Header ─── */
+    header {
+      background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 45%, #40916c 100%);
+      color: white;
+      padding: 2.5rem 1.5rem 2rem;
+      text-align: center;
+    }
+    header h1 { font-size: 2.1rem; font-weight: 800; letter-spacing: -0.5px; }
+    header p { margin-top: 0.4rem; opacity: 0.82; font-size: 1rem; }
+
+    .diet-toggle {
+      display: flex; gap: 0.5rem; justify-content: center;
+      margin-top: 1.25rem; flex-wrap: wrap;
+    }
+    .diet-btn {
+      padding: 0.45rem 1.2rem;
+      border: 2px solid rgba(255,255,255,0.45);
+      border-radius: 100px;
+      background: transparent; color: white;
+      cursor: pointer; font-size: 0.88rem; font-weight: 500;
+      transition: all 0.15s;
+    }
+    .diet-btn.active { background: white; color: var(--primary); border-color: white; }
+    .diet-btn:hover:not(.active) { border-color: rgba(255,255,255,0.8); }
+
+    .veg-note {
+      margin-top: 0.6rem; font-size: 0.78rem; opacity: 0.65;
+    }
+
+    /* ─── Sticky Filter Bar ─── */
+    .filters-section {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 0;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
+
+    .filter-row {
+      display: flex; align-items: center; gap: 0.6rem;
+      overflow-x: auto; scrollbar-width: none; padding: 0.2rem 0;
+    }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .filter-row + .filter-row { margin-top: 0.55rem; }
+
+    .filter-label {
+      font-size: 0.75rem; font-weight: 700;
+      color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.06em; white-space: nowrap; min-width: 72px;
+    }
+
+    .chip {
+      padding: 0.3rem 0.8rem;
+      border: 1.5px solid var(--border);
+      border-radius: 100px; background: white;
+      color: var(--text); cursor: pointer;
+      font-size: 0.82rem; white-space: nowrap;
+      transition: all 0.13s; user-select: none;
+      display: inline-flex; align-items: center; gap: 0.3em;
+    }
+    .chip:hover { border-color: var(--primary); color: var(--primary); }
+    .chip.selected { background: var(--primary); border-color: var(--primary); color: white; }
+    .chip.veg-chip.selected { background: #166534; border-color: #166534; }
+    .chip.meat-chip.selected { background: #9b2226; border-color: #9b2226; }
+
+    /* ─── Results bar ─── */
+    .results-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 0 0.75rem;
+    }
+    .results-count { font-size: 0.88rem; color: var(--text-muted); }
+    .clear-btn {
+      padding: 0.3rem 0.7rem; border: none;
+      background: transparent; color: var(--text-muted);
+      cursor: pointer; font-size: 0.83rem; text-decoration: underline;
+    }
+
+    /* ─── Recipe Grid ─── */
+    .recipe-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.1rem; padding-bottom: 3rem;
+    }
+
+    /* ─── Recipe Card ─── */
+    .recipe-card {
+      background: var(--surface); border-radius: var(--radius);
+      box-shadow: var(--shadow); cursor: pointer;
+      transition: transform 0.14s, box-shadow 0.14s;
+      overflow: hidden; display: flex; flex-direction: column;
+    }
+    .recipe-card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,0.13); }
+
+    .card-body { padding: 1.15rem; flex: 1; }
+
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem; }
+    .card-title { font-size: 1rem; font-weight: 700; line-height: 1.3; }
+
+    .time-badge {
+      background: #f3f4f6; color: var(--text-muted);
+      padding: 0.18rem 0.55rem; border-radius: 100px;
+      font-size: 0.76rem; white-space: nowrap; font-weight: 500;
+    }
+
+    .tag-row { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.6rem; }
+
+    .ptag {
+      padding: 0.18rem 0.6rem; border-radius: 100px;
+      font-size: 0.73rem; font-weight: 600;
+    }
+    .ptag.veg { background: #dcfce7; color: #166534; }
+    .ptag.meat { background: #fee2e2; color: #991b1b; }
+
+    .mtag {
+      padding: 0.18rem 0.6rem; border-radius: 5px;
+      font-size: 0.73rem; background: #eff6ff; color: #1d4ed8;
+    }
+
+    .card-preview {
+      margin-top: 0.65rem; font-size: 0.85rem; color: var(--text-muted);
+      line-height: 1.55; display: -webkit-box;
+      -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    .card-footer {
+      display: flex; gap: 0.35rem; padding: 0.65rem 1.15rem;
+      border-top: 1px solid #f3f4f6; flex-wrap: wrap;
+    }
+    .ftag {
+      font-size: 0.72rem; color: var(--text-muted);
+      background: var(--bg); padding: 0.13rem 0.5rem; border-radius: 4px;
+    }
+
+    /* ─── Empty State ─── */
+    .empty-state {
+      text-align: center; padding: 4rem 1rem;
+      color: var(--text-muted); grid-column: 1/-1;
+    }
+    .empty-state .emoji { font-size: 3rem; margin-bottom: 0.75rem; }
+    .empty-state h3 { font-size: 1.15rem; margin-bottom: 0.4rem; color: var(--text); }
+
+    /* ─── Modal ─── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.52); z-index: 1000;
+      padding: 1rem; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: white; border-radius: var(--radius);
+      max-width: 660px; width: 100%; max-height: 92vh; overflow-y: auto;
+    }
+
+    .modal-header {
+      padding: 1.4rem 1.4rem 0;
+      position: sticky; top: 0; background: white; z-index: 1;
+      border-bottom: 1px solid var(--border); padding-bottom: 1rem;
+    }
+    .modal-close {
+      float: right; background: none; border: none;
+      font-size: 1.6rem; cursor: pointer; color: var(--text-muted);
+      line-height: 1; margin-left: 0.75rem;
+    }
+    .modal-title { font-size: 1.35rem; font-weight: 800; padding-right: 2rem; }
+    .modal-meta { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.6rem; flex-wrap: wrap; }
+
+    .modal-body { padding: 1.25rem 1.4rem 1.6rem; }
+
+    .section-label {
+      font-size: 0.78rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text-muted); margin-bottom: 0.45rem; margin-top: 1.2rem;
+    }
+
+    .instructions { font-size: 0.93rem; line-height: 1.75; }
+
+    .variant-box {
+      padding: 0.8rem 1rem; border-radius: 0 10px 10px 0;
+      margin-top: 0.75rem; font-size: 0.88rem; line-height: 1.6;
+    }
+    .variant-box.veg { background: #f0fdf4; border-left: 3px solid #22c55e; }
+    .variant-box.meat { background: #fff7ed; border-left: 3px solid var(--accent); }
+    .variant-box strong { display: block; margin-bottom: 0.25rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.7; }
+
+    .baby-box {
+      background: #fffbeb; border-left: 3px solid #f59e0b;
+      padding: 0.75rem 1rem; border-radius: 0 10px 10px 0;
+      margin-top: 0.75rem; font-size: 0.86rem; line-height: 1.6;
+    }
+    .baby-box strong { display: block; margin-bottom: 0.25rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.7; }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 1.55rem; }
+      .recipe-grid { grid-template-columns: 1fr; }
+      .filter-label { min-width: 60px; font-size: 0.7rem; }
+      .modal-title { font-size: 1.15rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>Quick Recipe Finder</h1>
+    <p>Pick your protein, cooking method, veg &amp; carb — get dinner sorted.</p>
+    <div class="diet-toggle">
+      <button class="diet-btn active" data-diet="all">All Recipes</button>
+      <button class="diet-btn" data-diet="veg">🌿 Vegetarian</button>
+      <button class="diet-btn" data-diet="meat">🥩 Meat &amp; Fish</button>
+    </div>
+    <p class="veg-note">Vegetarian filter includes scallops, mussels &amp; clams</p>
+  </div>
+</header>
+
+<div class="filters-section">
+  <div class="container">
+    <div class="filter-row">
+      <span class="filter-label">Protein</span>
+      <div id="protein-chips" style="display:flex;gap:0.4rem;flex-wrap:nowrap;"></div>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">Method</span>
+      <div id="method-chips" style="display:flex;gap:0.4rem;flex-wrap:nowrap;"></div>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">Veg</span>
+      <div id="veg-chips" style="display:flex;gap:0.4rem;flex-wrap:nowrap;"></div>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">Carb</span>
+      <div id="carb-chips" style="display:flex;gap:0.4rem;flex-wrap:nowrap;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="results-bar">
+    <span class="results-count" id="results-count"></span>
+    <button class="clear-btn" onclick="clearFilters()">Clear all filters</button>
+  </div>
+  <div class="recipe-grid" id="recipe-grid"></div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <button class="modal-close" id="modal-close-btn">&#x2715;</button>
+      <h2 class="modal-title" id="modal-title"></h2>
+      <div class="modal-meta" id="modal-meta"></div>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ─── Data ───────────────────────────────────────────────────────────────────
+
+const VEG_PROTEINS = new Set([
+  'eggs','tofu','halloumi','feta','paneer',
+  'scallops','mussels','clams',
+  'chickpeas','lentils','white-beans','black-beans'
+]);
+
+const PROTEIN_META = {
+  'eggs':        { label: 'Eggs',        emoji: '🥚' },
+  'tofu':        { label: 'Tofu',        emoji: '🫘' },
+  'halloumi':    { label: 'Halloumi',    emoji: '🧀' },
+  'feta':        { label: 'Feta',        emoji: '🧀' },
+  'paneer':      { label: 'Paneer',      emoji: '🧀' },
+  'scallops':    { label: 'Scallops',    emoji: '🐚' },
+  'mussels':     { label: 'Mussels',     emoji: '🐚' },
+  'clams':       { label: 'Clams',       emoji: '🐚' },
+  'chickpeas':   { label: 'Chickpeas',   emoji: '🫘' },
+  'lentils':     { label: 'Lentils',     emoji: '🫘' },
+  'white-beans': { label: 'White Beans', emoji: '🫘' },
+  'black-beans': { label: 'Black Beans', emoji: '🫘' },
+  'salmon':      { label: 'Salmon',      emoji: '🐟' },
+  'chicken':     { label: 'Chicken',     emoji: '🍗' },
+  'beef':        { label: 'Beef',        emoji: '🥩' },
+  'lamb':        { label: 'Lamb',        emoji: '🥩' },
+  'prawns':      { label: 'Prawns',      emoji: '🦐' },
+  'tuna':        { label: 'Tuna',        emoji: '🐟' },
+  'chorizo':     { label: 'Chorizo',     emoji: '🌶️' },
+};
+
+const METHOD_META = {
+  'air-fryer':       { label: 'Air Fryer',        emoji: '💨' },
+  'pan':             { label: 'Pan',               emoji: '🍳' },
+  'pressure-cooker': { label: 'Pressure Cooker',  emoji: '⚡' },
+  'oven':            { label: 'Oven',              emoji: '🔥' },
+  'no-cook':         { label: 'No Cook',           emoji: '🥗' },
+  'grill':           { label: 'Grill',             emoji: '🔥' },
+};
+
+const VEG_META = {
+  'bok-choy':        { label: 'Bok Choy' },
+  'spinach':         { label: 'Spinach' },
+  'broccoli':        { label: 'Broccoli' },
+  'asparagus':       { label: 'Asparagus' },
+  'peas':            { label: 'Peas' },
+  'sweet-potato':    { label: 'Sweet Potato' },
+  'cherry-tomatoes': { label: 'Cherry Tomatoes' },
+  'mushrooms':       { label: 'Mushrooms' },
+  'courgette':       { label: 'Courgette' },
+  'cucumber':        { label: 'Cucumber' },
+  'peppers':         { label: 'Peppers' },
+  'green-beans':     { label: 'Green Beans' },
+  'kale':            { label: 'Kale' },
+  'avocado':         { label: 'Avocado' },
+  'eggplant':        { label: 'Eggplant' },
+  'cabbage':         { label: 'Cabbage' },
+  'carrots':         { label: 'Carrots' },
+};
+
+const CARB_META = {
+  'rice':     { label: 'Rice' },
+  'pasta':    { label: 'Pasta' },
+  'couscous': { label: 'Couscous' },
+  'bread':    { label: 'Bread' },
+  'gnocchi':  { label: 'Gnocchi' },
+  'noodles':  { label: 'Noodles' },
+  'tortilla': { label: 'Tortilla' },
+  'quinoa':   { label: 'Quinoa' },
+  'potatoes': { label: 'Potatoes' },
+};
+
+const recipes = [
+  {
+    id: 1,
+    name: "Miso Salmon & Greens Bowl",
+    time: 18,
+    proteins: ['salmon', 'scallops'],
+    methods: ['air-fryer', 'pan'],
+    vegetables: ['bok-choy'],
+    carbs: ['rice'],
+    instructions: `Mix 1 tbsp miso paste, 1 tbsp soy sauce, 1 tsp sesame oil, and 1 grated garlic clove into a glaze. Brush over salmon fillets and air fry at 200°C for 8–10 min. While that's going, heat sesame oil in a pan, add sliced bok choy with a splash of water, cover for 2 min until just wilted. Microwave the rice pouch. Assemble bowls: rice, greens, salmon on top, drizzle any remaining glaze.`,
+    vegVariant: `Pat scallops dry, season with salt. Sear in a hot pan with oil for 90 seconds each side until golden. Add to your bowl instead of salmon.`,
+    babyNote: `Flake salmon carefully checking for bones, serve rice and soft bok choy separately or mixed.`
+  },
+  {
+    id: 2,
+    name: "One-Pan Eggs with Spinach & Feta",
+    time: 12,
+    proteins: ['eggs', 'feta', 'chorizo'],
+    methods: ['pan'],
+    vegetables: ['spinach', 'cherry-tomatoes'],
+    carbs: ['bread'],
+    instructions: `Heat olive oil in a pan, add a minced garlic clove and halved cherry tomatoes, cook 2–3 min until tomatoes soften. Add big handfuls of baby spinach, stir until wilted. Make 3–4 wells, crack an egg into each, crumble feta around. Cover and cook 3–4 min until whites are set but yolks still soft. Serve with crusty bread.`,
+    meatVariant: `Brown sliced chorizo or diced ham in the pan before the garlic, then continue as normal.`,
+    babyNote: `Fully cook the yolk for baby's portion, chop spinach small.`
+  },
+  {
+    id: 3,
+    name: "Lemon Garlic Scallops with Peas & Rice",
+    time: 15,
+    proteins: ['scallops', 'chicken'],
+    methods: ['pan', 'pressure-cooker'],
+    vegetables: ['peas'],
+    carbs: ['rice'],
+    instructions: `Start rice in the pressure cooker (1 cup basmati, 1.25 cups water, 4 min high pressure, quick release). While it cooks, pat scallops dry and season with salt. Melt butter with olive oil in a pan, sear scallops 90 sec each side, remove. Add minced garlic and frozen peas to the same pan, cook 2 min, squeeze in lemon juice, toss through parsley. Return scallops briefly to warm. Serve over rice.`,
+    meatVariant: `Season a chicken thigh, pan-sear 5–6 min each side in a separate pan while scallops cook, then slice on top.`,
+    babyNote: `Scallops can be tough — chop very finely or just give them peas and rice with a little butter.`
+  },
+  {
+    id: 4,
+    name: "Pressure Cooker Dal with Yoghurt & Rice",
+    time: 20,
+    proteins: ['lentils', 'chicken'],
+    methods: ['pressure-cooker'],
+    vegetables: ['spinach'],
+    carbs: ['rice'],
+    instructions: `In the pressure cooker: heat oil, sauté diced onion 2 min, add grated garlic and ginger, 1 tsp cumin, 1 tsp turmeric. Add 1 cup rinsed red lentils and 3 cups water, pinch of salt. Pressure cook 8 min high, natural release 5 min. Stir through a handful of baby spinach until wilted. Microwave a rice pouch. Serve dal over rice with a dollop of plain yoghurt and a squeeze of lemon.`,
+    meatVariant: `Stir shredded rotisserie chicken through their portions at the end for extra protein.`,
+    babyNote: `Dal is baby gold — soft, iron-rich, mild. Thin with a splash of water if needed.`
+  },
+  {
+    id: 5,
+    name: "Air Fryer Salmon with Sweet Potato & Broccoli",
+    time: 18,
+    proteins: ['salmon', 'halloumi', 'chickpeas'],
+    methods: ['air-fryer'],
+    vegetables: ['sweet-potato', 'broccoli'],
+    carbs: [],
+    instructions: `Cube sweet potato small (~1.5cm) and toss with olive oil, paprika, salt. Air fry at 200°C for 12 min, shaking halfway. At the 6-min mark, add broccoli florets (tossed in oil) and the salmon fillets (oil, salt, paprika) to the basket. Finish all together. Squeeze lemon over before serving.`,
+    vegVariant: `Swap salmon for thick halloumi slices (air fry last 5 min only) or a drained can of chickpeas tossed in oil and paprika (add with sweet potato).`,
+    babyNote: `Mash the sweet potato, chop broccoli florets small, flake salmon checking for bones.`
+  },
+  {
+    id: 6,
+    name: "Pressure Cooker Chickpea & Spinach Curry",
+    time: 20,
+    proteins: ['chickpeas', 'chicken'],
+    methods: ['pressure-cooker'],
+    vegetables: ['spinach'],
+    carbs: ['rice'],
+    instructions: `In the pressure cooker: sauté diced onion in oil 2 min, add minced garlic and 1 tbsp curry powder, stir 30 sec. Add 1 can chickpeas (drained), 1 can crushed tomatoes, ½ can coconut milk, salt. Pressure cook 5 min high, quick release. Stir in big handfuls of baby spinach until wilted. Serve over microwave rice.`,
+    meatVariant: `Brown diced chicken thigh in oil before the onion step, remove, continue recipe, return chicken for pressure cook.`,
+    babyNote: `Mild curry powder only; mash or chop chickpeas lightly with a fork for easier eating.`
+  },
+  {
+    id: 7,
+    name: "Air Fryer Salmon Teriyaki with Rice",
+    time: 15,
+    proteins: ['salmon', 'scallops', 'tofu'],
+    methods: ['air-fryer'],
+    vegetables: ['cucumber'],
+    carbs: ['rice'],
+    instructions: `Whisk 2 tbsp soy sauce, 1 tbsp honey, 1 tsp grated ginger, 1 grated garlic clove into a teriyaki glaze. Brush over salmon, air fry at 200°C for 8–10 min, basting once with remaining sauce halfway through. Microwave rice. Serve with sliced cucumber and any remaining glaze drizzled over.`,
+    vegVariant: `Same teriyaki glaze works on scallops (air fry 6 min) or firm tofu cubes (press first, air fry 12 min, shaking halfway).`,
+    babyNote: `Honey is fine after 12 months — use maple syrup for younger babies. Rinse salmon portion briefly if sauce is too salty.`
+  },
+  {
+    id: 8,
+    name: "Pan-Fried Gnocchi with Peas & Parmesan",
+    time: 12,
+    proteins: ['white-beans', 'feta', 'chorizo'],
+    methods: ['pan'],
+    vegetables: ['peas'],
+    carbs: ['gnocchi'],
+    instructions: `Heat butter and a splash of olive oil in a pan. Add gnocchi straight from the packet (no boiling needed) in a single layer, cook 3–4 min until golden underneath, flip and cook another 2–3 min. Add minced garlic and frozen peas, cook 2 min. Finish with grated parmesan, lemon zest, and black pepper.`,
+    vegVariant: `Add a drained can of cannellini beans with the peas — they crisp up slightly in the butter and add great protein. Or crumble feta through at the end.`,
+    meatVariant: `Render crispy pancetta cubes in the pan first (remove, cook gnocchi in the fat), scatter back on top to serve.`,
+    babyNote: `Gnocchi can be a choking hazard whole — halve or quarter them for baby.`
+  },
+  {
+    id: 9,
+    name: "Clams with Garlic Butter Linguine",
+    time: 18,
+    proteins: ['clams', 'prawns'],
+    methods: ['pan'],
+    vegetables: [],
+    carbs: ['pasta'],
+    instructions: `Boil salted water, cook linguine to package time. Meanwhile, heat olive oil and butter in a large pan, add lots of minced garlic, cook 30 sec. Add cleaned clams and a splash of pasta water (or white wine), cover 4–5 min until shells open (discard any that don't). Toss drained pasta into the pan with clams, fresh parsley, lemon juice, and another knob of butter.`,
+    meatVariant: `Toss peeled prawns into the pan 2 min before the clams finish for a mixed shellfish feast.`,
+    babyNote: `Give baby plain buttered pasta with a few clams removed from shells and chopped very finely.`
+  },
+  {
+    id: 10,
+    name: "Air Fryer Salmon & Asparagus with Couscous",
+    time: 15,
+    proteins: ['salmon', 'halloumi', 'scallops'],
+    methods: ['air-fryer'],
+    vegetables: ['asparagus'],
+    carbs: ['couscous'],
+    instructions: `Pour 1 cup couscous into a bowl, cover with 1 cup boiling water + drizzle of olive oil + pinch of salt, cover with a plate, leave 5 min then fluff. Meanwhile, toss asparagus and salmon with olive oil, salt, and minced garlic. Air fry at 200°C — salmon 8–10 min, asparagus added for last 6 min. Squeeze lemon over everything to serve.`,
+    vegVariant: `Swap salmon for a thick halloumi steak (air fry 6 min, flipping once) or 6–8 scallops (air fry 6 min).`,
+    babyNote: `Couscous is soft and easy; chop asparagus tips small and skip woody ends.`
+  },
+  {
+    id: 11,
+    name: "Thai Green Curry",
+    time: 20,
+    proteins: ['tofu', 'chicken', 'prawns'],
+    methods: ['pan'],
+    vegetables: ['green-beans', 'eggplant'],
+    carbs: ['rice'],
+    instructions: `Microwave a rice pouch. In a wok or deep pan, heat oil over medium-high. Add 2 tbsp green curry paste, fry 1 min until fragrant. Pour in 1 can coconut milk, bring to a simmer. Add sliced eggplant and green beans, cook 5 min. Season with fish sauce (or soy sauce) and a pinch of sugar. Serve over rice with fresh lime and Thai basil if you have it.`,
+    vegVariant: `Press and cube firm tofu, pan-fry in a separate pan until golden, then add to the curry in the last 2 min.`,
+    meatVariant: `Slice chicken breast thin, add after the curry paste and fry 2–3 min before adding coconut milk. Or add raw prawns in the last 3 min.`,
+    babyNote: `Use mild curry paste and skip the fish sauce — baby gets coconut milk with soft veggies and plain rice on the side.`
+  },
+  {
+    id: 12,
+    name: "Cold Soba Noodle Bowl",
+    time: 15,
+    proteins: ['tofu', 'chicken', 'eggs'],
+    methods: ['pan', 'no-cook'],
+    vegetables: ['cucumber', 'carrots'],
+    carbs: ['noodles'],
+    instructions: `Cook soba noodles per packet (usually 4–5 min), drain, rinse under cold water. Make dressing: 3 tbsp soy sauce, 1 tbsp rice vinegar, 1 tsp sesame oil, 1 tsp honey, ½ tsp grated ginger. Toss noodles with dressing, sliced cucumber, grated carrots, and sliced spring onions. Top with sesame seeds.`,
+    vegVariant: `Pan-fry cubed firm tofu in sesame oil until golden (5 min), or slice a soft-boiled egg in half on top.`,
+    meatVariant: `Shred rotisserie chicken or quickly pan-sear a chicken breast, slice thin, and lay over the noodles.`,
+    babyNote: `Rinse baby's portion extra well to reduce sodium. Soba is soft and easy — serve noodles cut shorter.`
+  },
+  {
+    id: 13,
+    name: "Shakshuka",
+    time: 15,
+    proteins: ['eggs', 'feta'],
+    methods: ['pan'],
+    vegetables: ['peppers', 'cherry-tomatoes', 'spinach'],
+    carbs: ['bread'],
+    instructions: `Heat olive oil in a wide pan. Sauté ½ diced onion and 1 diced red pepper 4 min. Add 2 minced garlic cloves, 1 tsp cumin, ½ tsp smoked paprika, cook 1 min. Pour in 1 can crushed tomatoes + ½ can water, simmer 5 min. Stir in a handful of spinach. Make 3–4 wells, crack an egg into each. Crumble feta over the top. Cover and cook 4–5 min until whites are just set. Serve with crusty bread for scooping.`,
+    vegVariant: `This is already fully vegetarian — add halloumi cubes browned in a separate pan for extra protein.`,
+    babyNote: `Cook yolk fully for baby, chop peppers finely, serve with soft bread pieces for dipping.`
+  },
+  {
+    id: 14,
+    name: "Tuna & Cherry Tomato Pasta",
+    time: 15,
+    proteins: ['tuna', 'chickpeas'],
+    methods: ['pan'],
+    vegetables: ['cherry-tomatoes', 'spinach'],
+    carbs: ['pasta'],
+    instructions: `Cook pasta in salted boiling water. Meanwhile, heat olive oil in a pan, add 2 minced garlic cloves and halved cherry tomatoes, cook 4–5 min until tomatoes burst. Stir in a can of tuna (drained), a handful of capers, and a big handful of spinach. Toss drained pasta through with a splash of pasta water. Finish with lemon juice, black pepper, and parsley.`,
+    vegVariant: `Swap tuna for a drained can of chickpeas — fry them briefly in the pan until they just start to crisp at the edges.`,
+    babyNote: `Check tuna is in springwater, not brine. Chop pasta shorter for baby, serve with a small portion of the sauce.`
+  },
+  {
+    id: 15,
+    name: "Halloumi & Roasted Pepper Wraps",
+    time: 15,
+    proteins: ['halloumi', 'chicken'],
+    methods: ['pan'],
+    vegetables: ['peppers', 'cucumber', 'avocado'],
+    carbs: ['tortilla'],
+    instructions: `Slice halloumi into finger-thick pieces. Pan-fry in a dry hot pan 2–3 min each side until golden and squeaky. Warm tortillas in the same pan. Spread with hummus, then layer on roasted peppers (jar is fine), sliced cucumber, sliced avocado, and the halloumi. Finish with a drizzle of sriracha or hot sauce and fresh mint if you have it.`,
+    meatVariant: `Season a chicken breast, pan-fry 5–6 min each side until cooked through, slice thin and use instead of (or alongside) halloumi.`,
+    babyNote: `Halloumi is salty — rinse and chop into small pieces for baby. Serve fillings separately on their plate for easier eating.`
+  },
+  {
+    id: 16,
+    name: "Mussels in Garlic & White Wine",
+    time: 15,
+    proteins: ['mussels'],
+    methods: ['pan'],
+    vegetables: [],
+    carbs: ['bread'],
+    instructions: `Scrub mussels, discard any that don't close when tapped. In a large pot, melt butter over medium heat. Add 4 minced garlic cloves and a pinch of chilli flakes, cook 1 min. Pour in a good splash of white wine (or chicken stock), bring to a boil. Add mussels, cover and steam 4–5 min shaking the pot once, until all shells have opened (discard any that haven't). Stir through cream and fresh parsley. Serve with crusty bread to soak up the broth.`,
+    babyNote: `Mussels are a shellfish allergen — introduce carefully. Remove from shells, chop finely, serve with soft bread.`
+  },
+  {
+    id: 17,
+    name: "Beef & Broccoli Stir Fry",
+    time: 15,
+    proteins: ['beef', 'tofu'],
+    methods: ['pan'],
+    vegetables: ['broccoli', 'mushrooms'],
+    carbs: ['rice'],
+    instructions: `Microwave a rice pouch. Make sauce: 2 tbsp soy sauce, 1 tbsp oyster sauce, 1 tsp sesame oil, 1 tsp cornflour, splash of water. Slice beef steak thin against the grain. Heat wok or pan on very high heat with oil. Sear beef in batches 1–2 min, set aside. Stir-fry broccoli florets and sliced mushrooms 3–4 min. Return beef, pour over sauce, toss 1 min. Serve over rice.`,
+    vegVariant: `Press firm tofu, slice thick, pan-fry until golden on all sides before adding to the stir fry.`,
+    babyNote: `Slice beef very thin and serve separately with plain rice and steamed broccoli. Skip the sauce — just a tiny splash of soy if needed.`
+  },
+  {
+    id: 18,
+    name: "Prawn Fried Rice",
+    time: 15,
+    proteins: ['prawns', 'eggs', 'tofu'],
+    methods: ['pan'],
+    vegetables: ['peas', 'carrots'],
+    carbs: ['rice'],
+    instructions: `Use day-old cooked rice for best results (or microwave a pouch and spread on a tray to cool). Heat a wok or large pan over high heat with oil. Add raw prawns, cook 2 min each side until pink, set aside. In the same pan add a splash more oil, fry grated carrots 2 min, add frozen peas. Push everything to the side, crack in 2 eggs, scramble quickly. Add rice, breaking up any clumps. Toss everything with 2 tbsp soy sauce and 1 tsp sesame oil. Return prawns. Finish with sliced spring onions.`,
+    vegVariant: `Skip prawns and use crumbled firm tofu instead — press it first and fry until golden before adding the veg.`,
+    babyNote: `Serve a small portion with no soy sauce. Prawns should be chopped small. Egg is a great add for babies.`
+  },
+  {
+    id: 19,
+    name: "Paneer Butter Masala",
+    time: 22,
+    proteins: ['paneer', 'chicken'],
+    methods: ['pressure-cooker', 'pan'],
+    vegetables: ['spinach'],
+    carbs: ['rice', 'bread'],
+    instructions: `Pan-fry cubed paneer in butter until golden on all sides, set aside. In the pressure cooker: sauté diced onion in butter 2 min, add 2 minced garlic cloves, 1 tsp grated ginger, 1 tsp garam masala, 1 tsp cumin, ½ tsp turmeric. Stir 1 min. Add 1 can crushed tomatoes and ¼ cup cream or coconut cream. Pressure cook 5 min, quick release. Stir in paneer and a handful of spinach until wilted. Serve with rice or warm naan.`,
+    meatVariant: `Swap paneer for diced chicken thigh — brown in the pan first, then add to the pressure cooker with the tomatoes.`,
+    babyNote: `Cool well before serving, remove any large pieces of spice. Paneer is a good first protein for babies.`
+  },
+  {
+    id: 20,
+    name: "Lamb Kofta Bowl",
+    time: 22,
+    proteins: ['lamb', 'chickpeas'],
+    methods: ['grill', 'pan'],
+    vegetables: ['cucumber', 'cherry-tomatoes'],
+    carbs: ['couscous', 'bread'],
+    instructions: `Mix 400g lamb mince with 1 tsp cumin, ½ tsp coriander, ½ tsp cinnamon, 1 minced garlic clove, salt & pepper. Shape into small patties or sausages. Grill or pan-fry 3–4 min each side over high heat. Meanwhile, pour boiling water over couscous, cover 5 min and fluff. Make a quick salad: diced cucumber, halved cherry tomatoes, lemon juice, olive oil, fresh mint. Serve kofta on couscous with salad and a dollop of yoghurt.`,
+    vegVariant: `Shape falafels from a drained can of chickpeas blended with garlic, cumin, fresh herbs, and a spoon of flour. Pan-fry 3 min each side in olive oil.`,
+    babyNote: `Lamb mince is an excellent iron source — serve a mini kofta cut into pieces with soft couscous.`
+  },
+  {
+    id: 21,
+    name: "Mushroom & Lentil Bolognese",
+    time: 25,
+    proteins: ['lentils', 'beef'],
+    methods: ['pan', 'pressure-cooker'],
+    vegetables: ['mushrooms', 'spinach'],
+    carbs: ['pasta'],
+    instructions: `Cook pasta in salted water. Meanwhile, blitz mushrooms roughly in a food processor or chop very fine. Heat olive oil in a pan, cook diced onion 3 min, add mushrooms and cook until all water evaporates (5–7 min). Add 2 minced garlic cloves, 1 tbsp tomato paste, stir 1 min. Add 1 can crushed tomatoes and 1 can green/brown lentils (drained), ½ tsp each cumin and oregano. Simmer 10 min. Stir through spinach. Toss with pasta and parmesan.`,
+    meatVariant: `Brown 300g beef mince in the pan before the onion step, then continue the recipe as normal.`,
+    babyNote: `Lentils are brilliant for babies — serve a small bowl of sauce with short pasta. Skip extra salt.`
+  },
+  {
+    id: 22,
+    name: "Korean-Style Beef Bowl",
+    time: 15,
+    proteins: ['beef', 'tofu'],
+    methods: ['pan'],
+    vegetables: ['bok-choy', 'cucumber'],
+    carbs: ['rice'],
+    instructions: `Microwave a rice pouch. Make sauce: 2 tbsp soy sauce, 1 tbsp gochujang (or sriracha), 1 tbsp honey, 1 tsp sesame oil, 1 tsp rice vinegar. Brown 300g beef mince in a hot pan, breaking it up, 4–5 min. Add the sauce and toss together 1 min. In a separate pan, wilt bok choy in sesame oil 2 min. Serve rice topped with beef, bok choy, and sliced cucumber. Finish with sesame seeds and a soft-boiled egg if you have one.`,
+    vegVariant: `Crumble pressed firm tofu into the pan instead of beef — fry until golden and slightly crispy before adding the sauce.`,
+    babyNote: `Skip the gochujang for baby's portion. Serve with plain rice and lightly seasoned bok choy.`
+  },
+  {
+    id: 23,
+    name: "Chickpea & Sweet Potato Coconut Stew",
+    time: 20,
+    proteins: ['chickpeas', 'chicken'],
+    methods: ['pressure-cooker'],
+    vegetables: ['sweet-potato', 'kale'],
+    carbs: ['bread', 'rice'],
+    instructions: `In the pressure cooker: heat oil, sauté diced onion 2 min. Add 2 minced garlic cloves, 1 tsp curry powder, ½ tsp cumin, ½ tsp turmeric. Add 1 can chickpeas (drained), 1 can coconut milk, 1 medium sweet potato cut into 2cm cubes, and ½ cup water. Pressure cook 6 min, quick release. Stir in a big handful of shredded kale until wilted. Season with salt, lemon juice, and fresh coriander. Serve with crusty bread or rice.`,
+    meatVariant: `Brown diced chicken thigh in the pot before the onion. Remove, continue recipe, return chicken before pressure cooking.`,
+    babyNote: `Mash the sweet potato and chickpeas together — naturally sweet, soft, and nutritious for babies.`
+  },
+  {
+    id: 24,
+    name: "Asparagus & Lemon Risotto",
+    time: 25,
+    proteins: ['parmesan+eggs', 'prawns', 'scallops'],
+    methods: ['pan'],
+    vegetables: ['asparagus', 'peas'],
+    carbs: ['rice'],
+    instructions: `Heat 1L stock in a saucepan, keep warm. In a separate wide pan, melt butter, add diced onion and cook 3 min. Add 1 cup arborio rice, stir to coat. Add a splash of white wine, stir until absorbed. Add warm stock one ladle at a time, stirring constantly, waiting until each ladle is absorbed before adding the next (~18 min total). Chop asparagus into 2cm pieces, add with peas for the last 5 min. Finish with butter, parmesan, lemon zest. Season generously.`,
+    meatVariant: `Pan-sear scallops or prawns in butter for 90 sec each side while the risotto rests, and lay on top to serve.`,
+    babyNote: `Risotto is a perfect baby texture — serve plain before adding lots of parmesan. Chop asparagus pieces very small.`
+  },
+  {
+    id: 25,
+    name: "Black Bean & Avocado Tacos",
+    time: 15,
+    proteins: ['black-beans', 'beef', 'chicken'],
+    methods: ['pan'],
+    vegetables: ['avocado', 'cabbage', 'cherry-tomatoes'],
+    carbs: ['tortilla'],
+    instructions: `Drain and rinse 1 can black beans. Heat in a pan with 1 tsp cumin, ½ tsp smoked paprika, pinch of chilli flakes, and a splash of water. Cook 3–4 min until soft and slightly thickened. Warm tortillas. Assemble: spoon black beans onto tortilla, top with shredded cabbage, diced avocado, cherry tomato halves, a squeeze of lime, and a blob of sour cream or plain yoghurt.`,
+    meatVariant: `Brown 300g beef or chicken mince with the spices first, then add the drained beans to warm through.`,
+    babyNote: `Mash black beans for baby. Serve fillings separately on their tray for exploration. Skip chilli for little ones.`
+  },
+  {
+    id: 26,
+    name: "Pesto Pasta with White Beans & Spinach",
+    time: 12,
+    proteins: ['white-beans', 'chicken', 'prawns'],
+    methods: ['pan', 'no-cook'],
+    vegetables: ['spinach', 'cherry-tomatoes'],
+    carbs: ['pasta'],
+    instructions: `Cook pasta in salted boiling water. Reserve a big mug of pasta water before draining. Return pasta to pan, stir in 3–4 tbsp good pesto, a drained can of white beans, and a big handful of baby spinach. Add pasta water a splash at a time until saucy. Top with halved cherry tomatoes, black pepper, and parmesan.`,
+    meatVariant: `Pan-fry sliced chicken breast or prawns in olive oil and garlic 3–4 min while pasta cooks. Stir through at the end.`,
+    babyNote: `Good pesto is low in salt — serve baby a small portion before adding parmesan. White beans are soft and easy.`
+  },
+  {
+    id: 27,
+    name: "Tofu Scramble on Toast",
+    time: 12,
+    proteins: ['tofu', 'eggs'],
+    methods: ['pan'],
+    vegetables: ['spinach', 'mushrooms', 'cherry-tomatoes'],
+    carbs: ['bread'],
+    instructions: `Toast bread. Heat olive oil in a pan, add sliced mushrooms and halved cherry tomatoes, cook 4 min until mushrooms are golden. Add a big handful of spinach, wilt 1 min. Crumble in a block of firm tofu (pressed), add ½ tsp turmeric, ½ tsp cumin, 1 tbsp nutritional yeast (optional), and a pinch of salt. Stir-fry 3–4 min until tofu is warmed through and slightly golden. Pile onto toast.`,
+    meatVariant: `Scramble 3–4 eggs in the same pan instead of tofu for a classic scrambled egg on toast.`,
+    babyNote: `Skip the nutritional yeast and keep seasoning minimal. Crumbled tofu or soft scrambled eggs are excellent finger food on soft bread.`
+  },
+  {
+    id: 28,
+    name: "Prawn & Coconut Curry",
+    time: 20,
+    proteins: ['prawns', 'tofu', 'chickpeas'],
+    methods: ['pan'],
+    vegetables: ['spinach', 'cherry-tomatoes'],
+    carbs: ['rice'],
+    instructions: `Microwave a rice pouch. Heat oil in a pan, fry diced onion 3 min, add 2 minced garlic cloves and 1 tbsp curry paste (Thai red or tikka masala both work). Cook 1 min. Pour in 1 can coconut milk and ½ can water, simmer 5 min. Add cherry tomatoes and cook 2 min until starting to burst. Add raw prawns and cook 3–4 min until pink and cooked through. Stir in spinach to wilt. Serve over rice with lime and coriander.`,
+    vegVariant: `Use pressed firm tofu cubes (pan-fried until golden first) or a drained can of chickpeas instead of prawns.`,
+    babyNote: `Keep a mild curry paste and watch for shellfish allergy on first introduction. Serve baby plain rice with coconut sauce on the side.`
+  },
+  {
+    id: 29,
+    name: "Oven-Baked Chicken Thighs with Root Veg",
+    time: 40,
+    proteins: ['chicken', 'chickpeas'],
+    methods: ['oven'],
+    vegetables: ['sweet-potato', 'carrots', 'peppers'],
+    carbs: ['potatoes'],
+    instructions: `Preheat oven to 200°C. Chop sweet potato, carrots, potatoes, and peppers into similar-sized chunks. Toss with olive oil, 1 tsp smoked paprika, 1 tsp garlic powder, salt. Spread in a roasting tin. Nestle bone-in chicken thighs on top, season well. Roast 35–40 min until chicken skin is crispy and veg is caramelised. Squeeze a lemon over before serving.`,
+    vegVariant: `Spread a drained can of chickpeas through the veg instead — toss in the same spiced oil and roast 25–30 min.`,
+    babyNote: `Roasted root veg is perfect baby food — mash carrots and sweet potato. Shred chicken from bone carefully.`
+  },
+  {
+    id: 30,
+    name: "Warm Lentil & Halloumi Salad",
+    time: 18,
+    proteins: ['lentils', 'halloumi', 'feta'],
+    methods: ['pan'],
+    vegetables: ['spinach', 'cherry-tomatoes', 'cucumber'],
+    carbs: ['quinoa'],
+    instructions: `Cook ½ cup quinoa in 1 cup water 12 min, fluff. Meanwhile, slice halloumi into thick pieces, dry-fry in a hot pan 2–3 min each side. Warm 1 can of green lentils (drained) in the same pan with a splash of lemon juice and 1 tsp cumin. Toss quinoa, lentils, baby spinach, halved cherry tomatoes, and sliced cucumber in a bowl. Dress with olive oil, lemon juice, salt, and pepper. Top with halloumi and fresh herbs.`,
+    vegVariant: `Swap halloumi for crumbled feta — no cooking needed, just scatter over the top.`,
+    babyNote: `Quinoa and lentils are nutritious for babies. Skip the dressing salt; serve components separately.`
+  }
+];
+
+// ─── State ───────────────────────────────────────────────────────────────────
+
+const state = {
+  diet: 'all',       // 'all' | 'veg' | 'meat'
+  proteins: new Set(),
+  methods: new Set(),
+  vegetables: new Set(),
+  carbs: new Set(),
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function isVegProtein(p) { return VEG_PROTEINS.has(p); }
+
+function recipeHasVegProtein(r) {
+  return r.proteins.some(p => isVegProtein(p));
+}
+function recipeHasMeatProtein(r) {
+  return r.proteins.some(p => !isVegProtein(p));
+}
+
+function recipeMatches(r) {
+  // Diet filter
+  if (state.diet === 'veg' && !recipeHasVegProtein(r)) return false;
+  if (state.diet === 'meat' && !recipeHasMeatProtein(r)) return false;
+
+  // Protein filter
+  if (state.proteins.size > 0) {
+    const visibleProteins = getVisibleProteins(r.proteins);
+    if (!visibleProteins.some(p => state.proteins.has(p))) return false;
+  }
+
+  // Method filter
+  if (state.methods.size > 0 && !r.methods.some(m => state.methods.has(m))) return false;
+
+  // Veg filter
+  if (state.vegetables.size > 0 && !r.vegetables.some(v => state.vegetables.has(v))) return false;
+
+  // Carb filter
+  if (state.carbs.size > 0 && !r.carbs.some(c => state.carbs.has(c))) return false;
+
+  return true;
+}
+
+// In veg mode, only show veg proteins; in meat mode, only meat proteins; else all
+function getVisibleProteins(proteins) {
+  if (state.diet === 'veg') return proteins.filter(p => isVegProtein(p));
+  if (state.diet === 'meat') return proteins.filter(p => !isVegProtein(p));
+  return proteins;
+}
+
+// ─── Render chips ────────────────────────────────────────────────────────────
+
+function getAllValues(key) {
+  const values = new Set();
+  recipes.forEach(r => (r[key] || []).forEach(v => values.add(v)));
+  return [...values].sort();
+}
+
+function getVisibleProteinSet() {
+  const all = getAllValues('proteins');
+  if (state.diet === 'veg') return all.filter(p => isVegProtein(p));
+  if (state.diet === 'meat') return all.filter(p => !isVegProtein(p));
+  return all;
+}
+
+function buildChips(containerId, items, selectedSet, toggleFn, renderItem) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  items.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (selectedSet.has(item) ? ' selected' : '');
+    const isVeg = VEG_PROTEINS.has(item);
+    if (containerId === 'protein-chips') {
+      btn.classList.add(isVeg ? 'veg-chip' : 'meat-chip');
+    }
+    btn.textContent = renderItem(item);
+    btn.onclick = () => { toggleFn(item); render(); };
+    el.appendChild(btn);
+  });
+}
+
+function renderChips() {
+  buildChips(
+    'protein-chips',
+    getVisibleProteinSet(),
+    state.proteins,
+    p => { state.proteins.has(p) ? state.proteins.delete(p) : state.proteins.add(p); },
+    p => {
+      const m = PROTEIN_META[p];
+      return m ? `${m.emoji} ${m.label}` : p;
+    }
+  );
+
+  buildChips(
+    'method-chips',
+    Object.keys(METHOD_META),
+    state.methods,
+    m => { state.methods.has(m) ? state.methods.delete(m) : state.methods.add(m); },
+    m => {
+      const meta = METHOD_META[m];
+      return meta ? `${meta.emoji} ${meta.label}` : m;
+    }
+  );
+
+  buildChips(
+    'veg-chips',
+    getAllValues('vegetables'),
+    state.vegetables,
+    v => { state.vegetables.has(v) ? state.vegetables.delete(v) : state.vegetables.add(v); },
+    v => VEG_META[v] ? VEG_META[v].label : v
+  );
+
+  buildChips(
+    'carb-chips',
+    getAllValues('carbs'),
+    state.carbs,
+    c => { state.carbs.has(c) ? state.carbs.delete(c) : state.carbs.add(c); },
+    c => CARB_META[c] ? CARB_META[c].label : c
+  );
+}
+
+// ─── Render cards ────────────────────────────────────────────────────────────
+
+function proteinTagsHTML(proteins) {
+  const visible = getVisibleProteins(proteins);
+  return visible.map(p => {
+    const m = PROTEIN_META[p];
+    const label = m ? `${m.emoji} ${m.label}` : p;
+    const cls = isVegProtein(p) ? 'veg' : 'meat';
+    return `<span class="ptag ${cls}">${label}</span>`;
+  }).join('');
+}
+
+function methodTagsHTML(methods) {
+  return methods.map(m => {
+    const meta = METHOD_META[m];
+    return `<span class="mtag">${meta ? meta.emoji + ' ' + meta.label : m}</span>`;
+  }).join('');
+}
+
+function renderCards() {
+  const grid = document.getElementById('recipe-grid');
+  const matched = recipes.filter(recipeMatches);
+
+  document.getElementById('results-count').textContent =
+    matched.length === 0 ? 'No recipes match — try fewer filters'
+    : `${matched.length} recipe${matched.length === 1 ? '' : 's'} found`;
+
+  if (matched.length === 0) {
+    grid.innerHTML = `<div class="empty-state">
+      <div class="emoji">🍽</div>
+      <h3>No recipes found</h3>
+      <p>Try removing some filters to see more options.</p>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = matched.map(r => {
+    const vegList = r.vegetables.map(v => VEG_META[v] ? VEG_META[v].label : v);
+    const carbList = r.carbs.map(c => CARB_META[c] ? CARB_META[c].label : c);
+    const footerTags = [...vegList, ...carbList].map(t => `<span class="ftag">${t}</span>`).join('');
+
+    return `<div class="recipe-card" onclick="openModal(${r.id})">
+      <div class="card-body">
+        <div class="card-top">
+          <span class="card-title">${r.name}</span>
+          <span class="time-badge">⏱ ${r.time} min</span>
+        </div>
+        <div class="tag-row">${proteinTagsHTML(r.proteins)}</div>
+        <div class="tag-row">${methodTagsHTML(r.methods)}</div>
+        <p class="card-preview">${r.instructions}</p>
+      </div>
+      ${footerTags ? `<div class="card-footer">${footerTags}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function render() {
+  renderChips();
+  renderCards();
+}
+
+// ─── Modal ───────────────────────────────────────────────────────────────────
+
+function openModal(id) {
+  const r = recipes.find(x => x.id === id);
+  if (!r) return;
+
+  document.getElementById('modal-title').textContent = r.name;
+
+  const allProteins = r.proteins.map(p => {
+    const m = PROTEIN_META[p];
+    const label = m ? `${m.emoji} ${m.label}` : p;
+    const cls = isVegProtein(p) ? 'veg' : 'meat';
+    return `<span class="ptag ${cls}">${label}</span>`;
+  }).join('');
+  const methods = r.methods.map(m => {
+    const meta = METHOD_META[m];
+    return `<span class="mtag">${meta ? meta.emoji + ' ' + meta.label : m}</span>`;
+  }).join('');
+
+  document.getElementById('modal-meta').innerHTML =
+    `<span class="time-badge">⏱ ${r.time} min</span>${allProteins}${methods}`;
+
+  let body = `
+    <div class="section-label">Instructions</div>
+    <p class="instructions">${r.instructions}</p>
+  `;
+
+  if (r.vegVariant) {
+    body += `<div class="variant-box veg">
+      <strong>🌿 Vegetarian version</strong>${r.vegVariant}
+    </div>`;
+  }
+  if (r.meatVariant) {
+    body += `<div class="variant-box meat">
+      <strong>🥩 Add meat</strong>${r.meatVariant}
+    </div>`;
+  }
+  if (r.babyNote) {
+    body += `<div class="baby-box">
+      <strong>👶 Baby note</strong>${r.babyNote}
+    </div>`;
+  }
+
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ─── Diet toggle ─────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.diet-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.diet = btn.dataset.diet;
+    state.proteins.clear(); // reset protein filter on diet switch
+    document.querySelectorAll('.diet-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  });
+});
+
+// ─── Clear filters ────────────────────────────────────────────────────────────
+
+function clearFilters() {
+  state.proteins.clear();
+  state.methods.clear();
+  state.vegetables.clear();
+  state.carbs.clear();
+  render();
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+
+render();
+</script>
+</body>
+</html>
