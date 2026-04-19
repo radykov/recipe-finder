@@ -68,16 +68,25 @@
 
     .filter-row {
       display: flex; align-items: center; gap: 0.6rem;
-      overflow-x: auto; scrollbar-width: none; padding: 0.2rem 0;
+      padding: 0.2rem 0; min-width: 0;
     }
-    .filter-row::-webkit-scrollbar { display: none; }
     .filter-row + .filter-row { margin-top: 0.55rem; }
 
     .filter-label {
       font-size: 0.75rem; font-weight: 700;
       color: var(--text-muted); text-transform: uppercase;
-      letter-spacing: 0.06em; white-space: nowrap; min-width: 72px;
+      letter-spacing: 0.06em; white-space: nowrap;
+      min-width: 72px; flex-shrink: 0;
     }
+
+    #protein-chips, #method-chips, #veg-chips, #carb-chips {
+      overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0;
+      padding-bottom: 2px;
+    }
+    #protein-chips::-webkit-scrollbar,
+    #method-chips::-webkit-scrollbar,
+    #veg-chips::-webkit-scrollbar,
+    #carb-chips::-webkit-scrollbar { display: none; }
 
     .chip {
       padding: 0.3rem 0.8rem;
@@ -144,6 +153,14 @@
     .mtag {
       padding: 0.18rem 0.6rem; border-radius: 5px;
       font-size: 0.73rem; background: #eff6ff; color: #1d4ed8;
+    }
+    .vtag {
+      padding: 0.18rem 0.6rem; border-radius: 5px;
+      font-size: 0.73rem; background: #f0fdf4; color: #15803d;
+    }
+    .ctag {
+      padding: 0.18rem 0.6rem; border-radius: 5px;
+      font-size: 0.73rem; background: #fef9ec; color: #92400e;
     }
 
     .card-preview {
@@ -247,19 +264,19 @@
   <div class="container">
     <div class="filter-row">
       <span class="filter-label">Protein</span>
-      <div id="protein-chips" style="display:flex;gap:0.4rem;flex-wrap:nowrap;"></div>
+      <div id="protein-chips" style="display:flex;gap:0.4rem;flex-wrap:nowrap;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none;padding-bottom:2px;"></div>
     </div>
     <div class="filter-row">
       <span class="filter-label">Method</span>
-      <div id="method-chips" style="display:flex;gap:0.4rem;flex-wrap:nowrap;"></div>
+      <div id="method-chips" style="display:flex;gap:0.4rem;flex-wrap:nowrap;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none;padding-bottom:2px;"></div>
     </div>
     <div class="filter-row">
       <span class="filter-label">Veg</span>
-      <div id="veg-chips" style="display:flex;gap:0.4rem;flex-wrap:nowrap;"></div>
+      <div id="veg-chips" style="display:flex;gap:0.4rem;flex-wrap:nowrap;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none;padding-bottom:2px;"></div>
     </div>
     <div class="filter-row">
       <span class="filter-label">Carb</span>
-      <div id="carb-chips" style="display:flex;gap:0.4rem;flex-wrap:nowrap;"></div>
+      <div id="carb-chips" style="display:flex;gap:0.4rem;flex-wrap:nowrap;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none;padding-bottom:2px;"></div>
     </div>
   </div>
 </div>
@@ -575,42 +592,6 @@ const recipes = [
     babyNote: `Serve a small portion with no soy sauce. Prawns should be chopped small. Egg is a great add for babies.`
   },
   {
-    id: 19,
-    name: "Paneer Butter Masala",
-    time: 22,
-    proteins: ['paneer', 'chicken'],
-    methods: ['pressure-cooker', 'pan'],
-    vegetables: ['spinach'],
-    carbs: ['rice', 'bread'],
-    instructions: `Pan-fry cubed paneer in butter until golden on all sides, set aside. In the pressure cooker: sauté diced onion in butter 2 min, add 2 minced garlic cloves, 1 tsp grated ginger, 1 tsp garam masala, 1 tsp cumin, ½ tsp turmeric. Stir 1 min. Add 1 can crushed tomatoes and ¼ cup cream or coconut cream. Pressure cook 5 min, quick release. Stir in paneer and a handful of spinach until wilted. Serve with rice or warm naan.`,
-    meatVariant: `Swap paneer for diced chicken thigh — brown in the pan first, then add to the pressure cooker with the tomatoes.`,
-    babyNote: `Cool well before serving, remove any large pieces of spice. Paneer is a good first protein for babies.`
-  },
-  {
-    id: 20,
-    name: "Lamb Kofta Bowl",
-    time: 22,
-    proteins: ['lamb', 'chickpeas'],
-    methods: ['grill', 'pan'],
-    vegetables: ['cucumber', 'cherry-tomatoes'],
-    carbs: ['couscous', 'bread'],
-    instructions: `Mix 400g lamb mince with 1 tsp cumin, ½ tsp coriander, ½ tsp cinnamon, 1 minced garlic clove, salt & pepper. Shape into small patties or sausages. Grill or pan-fry 3–4 min each side over high heat. Meanwhile, pour boiling water over couscous, cover 5 min and fluff. Make a quick salad: diced cucumber, halved cherry tomatoes, lemon juice, olive oil, fresh mint. Serve kofta on couscous with salad and a dollop of yoghurt.`,
-    vegVariant: `Shape falafels from a drained can of chickpeas blended with garlic, cumin, fresh herbs, and a spoon of flour. Pan-fry 3 min each side in olive oil.`,
-    babyNote: `Lamb mince is an excellent iron source — serve a mini kofta cut into pieces with soft couscous.`
-  },
-  {
-    id: 21,
-    name: "Mushroom & Lentil Bolognese",
-    time: 25,
-    proteins: ['lentils', 'beef'],
-    methods: ['pan', 'pressure-cooker'],
-    vegetables: ['mushrooms', 'spinach'],
-    carbs: ['pasta'],
-    instructions: `Cook pasta in salted water. Meanwhile, blitz mushrooms roughly in a food processor or chop very fine. Heat olive oil in a pan, cook diced onion 3 min, add mushrooms and cook until all water evaporates (5–7 min). Add 2 minced garlic cloves, 1 tbsp tomato paste, stir 1 min. Add 1 can crushed tomatoes and 1 can green/brown lentils (drained), ½ tsp each cumin and oregano. Simmer 10 min. Stir through spinach. Toss with pasta and parmesan.`,
-    meatVariant: `Brown 300g beef mince in the pan before the onion step, then continue the recipe as normal.`,
-    babyNote: `Lentils are brilliant for babies — serve a small bowl of sauce with short pasta. Skip extra salt.`
-  },
-  {
     id: 22,
     name: "Korean-Style Beef Bowl",
     time: 15,
@@ -633,18 +614,6 @@ const recipes = [
     instructions: `In the pressure cooker: heat oil, sauté diced onion 2 min. Add 2 minced garlic cloves, 1 tsp curry powder, ½ tsp cumin, ½ tsp turmeric. Add 1 can chickpeas (drained), 1 can coconut milk, 1 medium sweet potato cut into 2cm cubes, and ½ cup water. Pressure cook 6 min, quick release. Stir in a big handful of shredded kale until wilted. Season with salt, lemon juice, and fresh coriander. Serve with crusty bread or rice.`,
     meatVariant: `Brown diced chicken thigh in the pot before the onion. Remove, continue recipe, return chicken before pressure cooking.`,
     babyNote: `Mash the sweet potato and chickpeas together — naturally sweet, soft, and nutritious for babies.`
-  },
-  {
-    id: 24,
-    name: "Asparagus & Lemon Risotto",
-    time: 25,
-    proteins: ['parmesan+eggs', 'prawns', 'scallops'],
-    methods: ['pan'],
-    vegetables: ['asparagus', 'peas'],
-    carbs: ['rice'],
-    instructions: `Heat 1L stock in a saucepan, keep warm. In a separate wide pan, melt butter, add diced onion and cook 3 min. Add 1 cup arborio rice, stir to coat. Add a splash of white wine, stir until absorbed. Add warm stock one ladle at a time, stirring constantly, waiting until each ladle is absorbed before adding the next (~18 min total). Chop asparagus into 2cm pieces, add with peas for the last 5 min. Finish with butter, parmesan, lemon zest. Season generously.`,
-    meatVariant: `Pan-sear scallops or prawns in butter for 90 sec each side while the risotto rests, and lay on top to serve.`,
-    babyNote: `Risotto is a perfect baby texture — serve plain before adding lots of parmesan. Chop asparagus pieces very small.`
   },
   {
     id: 25,
@@ -693,18 +662,6 @@ const recipes = [
     instructions: `Microwave a rice pouch. Heat oil in a pan, fry diced onion 3 min, add 2 minced garlic cloves and 1 tbsp curry paste (Thai red or tikka masala both work). Cook 1 min. Pour in 1 can coconut milk and ½ can water, simmer 5 min. Add cherry tomatoes and cook 2 min until starting to burst. Add raw prawns and cook 3–4 min until pink and cooked through. Stir in spinach to wilt. Serve over rice with lime and coriander.`,
     vegVariant: `Use pressed firm tofu cubes (pan-fried until golden first) or a drained can of chickpeas instead of prawns.`,
     babyNote: `Keep a mild curry paste and watch for shellfish allergy on first introduction. Serve baby plain rice with coconut sauce on the side.`
-  },
-  {
-    id: 29,
-    name: "Oven-Baked Chicken Thighs with Root Veg",
-    time: 40,
-    proteins: ['chicken', 'chickpeas'],
-    methods: ['oven'],
-    vegetables: ['sweet-potato', 'carrots', 'peppers'],
-    carbs: ['potatoes'],
-    instructions: `Preheat oven to 200°C. Chop sweet potato, carrots, potatoes, and peppers into similar-sized chunks. Toss with olive oil, 1 tsp smoked paprika, 1 tsp garlic powder, salt. Spread in a roasting tin. Nestle bone-in chicken thighs on top, season well. Roast 35–40 min until chicken skin is crispy and veg is caramelised. Squeeze a lemon over before serving.`,
-    vegVariant: `Spread a drained can of chickpeas through the veg instead — toss in the same spiced oil and roast 25–30 min.`,
-    babyNote: `Roasted root veg is perfect baby food — mash carrots and sweet potato. Shred chicken from bone carefully.`
   },
   {
     id: 30,
@@ -816,7 +773,7 @@ function renderChips() {
 
   buildChips(
     'method-chips',
-    Object.keys(METHOD_META),
+    getAllValues('methods'),
     state.methods,
     m => { state.methods.has(m) ? state.methods.delete(m) : state.methods.add(m); },
     m => {
@@ -879,9 +836,8 @@ function renderCards() {
   }
 
   grid.innerHTML = matched.map(r => {
-    const vegList = r.vegetables.map(v => VEG_META[v] ? VEG_META[v].label : v);
-    const carbList = r.carbs.map(c => CARB_META[c] ? CARB_META[c].label : c);
-    const footerTags = [...vegList, ...carbList].map(t => `<span class="ftag">${t}</span>`).join('');
+    const vegTags = r.vegetables.map(v => `<span class="vtag">${VEG_META[v] ? VEG_META[v].label : v}</span>`).join('');
+    const carbTags = r.carbs.map(c => `<span class="ctag">${CARB_META[c] ? CARB_META[c].label : c}</span>`).join('');
 
     return `<div class="recipe-card" onclick="openModal(${r.id})">
       <div class="card-body">
@@ -890,10 +846,9 @@ function renderCards() {
           <span class="time-badge">⏱ ${r.time} min</span>
         </div>
         <div class="tag-row">${proteinTagsHTML(r.proteins)}</div>
-        <div class="tag-row">${methodTagsHTML(r.methods)}</div>
+        <div class="tag-row">${methodTagsHTML(r.methods)}${vegTags}${carbTags}</div>
         <p class="card-preview">${r.instructions}</p>
       </div>
-      ${footerTags ? `<div class="card-footer">${footerTags}</div>` : ''}
     </div>`;
   }).join('');
 }
